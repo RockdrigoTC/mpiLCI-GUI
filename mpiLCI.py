@@ -11,10 +11,9 @@ import paramiko
 
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-host = ""
-user = ""
-password = ""
-# archivo_seleccionado = StringVar()
+user = ''
+host = ''
+password = ''
 ruta_absoluta = ""
 root = Tk()
 # root.resizable(0, 0)
@@ -150,15 +149,12 @@ def salir():
     root.destroy()
 
 
-def connect_ssh():
-    global host, user, password
+def connect_ssh(h, u, p):
+    global host, user
 
-    #! Borrar
-    #!############################
-    host = "172.23.208.188"
-    user = "rockdri"
-    password = "MetalMetal9219"
-    #!############################
+    host = h
+    user = u
+    password = p
 
     try:
         # Conectar al servidor utilizando las credenciales necesarias
@@ -365,7 +361,7 @@ def mostrar_directorio(directorio, frame):
 
 
 def crear_menu_connect():
-    global host, user, password, menu_conexion
+    global menu_conexion
     root.geometry("250x100")
     root.title("Sesión")
     menu_conexion = ttk.Frame(root)
@@ -377,7 +373,7 @@ def crear_menu_connect():
     label_pass = ttk.Label(menu_conexion, text="Password:")
     entry_pass = ttk.Entry(menu_conexion, show="*")
     button_exec = ttk.Button(
-        menu_conexion, text="Conectar", command=connect_ssh)
+        menu_conexion, text="Conectar", command=lambda: connect_ssh(entry_host.get(), entry_user.get(), entry_pass.get()))
     text_output = Text(menu_conexion)
     # Posicionar los widgets
     label_host.grid(row=0, column=0, sticky="W")
@@ -387,12 +383,6 @@ def crear_menu_connect():
     label_pass.grid(row=2, column=0, sticky="W")
     entry_pass.grid(row=2, column=0, sticky="W", padx=80)
     button_exec.grid(row=3, column=0, sticky="W", padx=100)
-    # text_output.grid(row=4, column=0)
-
-    # Obtener los valores de los widgets
-    host = entry_host.get()
-    user = entry_user.get()
-    password = entry_pass.get()
 
 
 def crear_menu_principal():
