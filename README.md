@@ -4,13 +4,14 @@
 
 ## Dependencias
 ### Servidor
-  - mpi
+  - [mpi](https://www.mpich.org/)
   - ssh-server
   
 ### Cliente
 - ssh-client
-- python
-- Paramiko
+- [Python](https://www.python.org/downloads/)
+- [pip](https://pypi.org/project/pip/)
+- [Paramiko](https://pypi.org/project/paramiko/)
    ``` sh
    pip install paramiko
    ```
