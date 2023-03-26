@@ -1,0 +1,429 @@
+#!/bin/bash
+
+dir="$HOME/MPI"
+dirSource="$dir/sourceMPI"
+dirBuild="$dir/buildMPI"
+dirOut="$dir/outputMPI"
+dirMachine="$dir/machinefileMPI"
+
+function check_source() {
+    if [[ -z "$1" ]]; then
+        echo "Error: falta especificar el archivo"
+        return 1
+    elif [[ ! "$1" =~ \.(c|cpp)$ ]]; then
+        echo "Error: el archivo fuente debe tener extensión .c o .cpp"
+        return 1
+    elif ! [ -e $dir/sourceMPI/$1 ]; then
+        echo "Error: el archivo $1 no existe"
+        return 1
+    fi
+
+    return 0
+}
+
+function check_num_proc() {
+    if [[ -z "$1" ]]; then
+        echo "Error: falta especificar el número de procesos con la opción -np"
+        return 1
+    elif ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -le 0 ]]; then
+        echo "Error: el número de procesos debe ser un entero mayor a cero"
+        return 1
+    fi
+
+    return 0
+}
+
+function check_exe_name() {
+    if [[ -z "$1" ]]; then
+        echo "Error: falta especificar el nombre del archivo"
+        return 1
+    elif ! [ -e $dir/buildMPI/$1 ]; then
+        echo "Error: el archivo $1 no existe"
+        return 1
+    fi
+
+    return 0
+}
+
+function check_machine_file() {
+    if [[ -z "$1" ]]; then
+        echo "Error: falta especificar el nombre del archivo"
+        return 1
+    elif [[ ! "$1" =~ \.txt$ ]]; then
+        echo "Error: el archivo machinefile debe tener extensión .txt"
+        return 1
+    elif ! [ -e $dirMachine/$1 ]; then
+        echo "Error: el archivo $1 no existe"
+        return 1
+    fi
+
+    return 0
+}
+
+function check_output_file() {
+    if [[ -z "$1" ]]; then
+        echo "Error: falta especificar el nombre del archivo"
+        return 1
+    elif ! [ -e $dirOut/$1 ]; then
+        echo "Error: el archivo $1 no existe"
+        return 1
+    fi
+
+    return 0
+}
+
+#Función para verificar si una cadena está vacía
+function is_empty() {
+    if [[ -z "$1" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function compilar() {
+    if [[ $2 =~ \.c$ ]]; then
+        echo "Ejecutanto: mpicc -o $dir/buildMPI/$1 $dir/sourceMPI/$2"
+        error=$(mpicc -o $dir/buildMPI/$1 $dir/sourceMPI/$2)
+    elif [[ $2 =~ \.cpp$ ]]; then
+        echo "Ejecutanto: mpic++ -o $dir/buildMPI/$1 $dir/sourceMPI/$2"
+        error=$(mpic++ -o $dir/buildMPI/$1 $dir/sourceMPI/$2)
+    else
+        echo "$2 no tiene una extension valida (.c o .cpp)"
+        return 1
+    fi
+
+    if [ -n "$error" -o $? -ne 0 ]; then
+
+        echo ">El cmando mpirun fallo con el codigo de salida: $error"
+        return 1
+    else
+        echo ">>>Compilation successful"
+        echo "Codigo fuente: $2"
+        echo "Programa: $1"
+        echo ""
+    fi
+
+    return 0
+}
+
+function ejecutar() {
+    echo "Ejecutanto: mpirun -np $1 $dir/buildMPI/$2"
+    error=$(mpirun -np $1 -machinefile "$dirMachine/$3" $dir/buildMPI/$2 2>&1 >$dir/outputMPI/$2.txt)
+    if [ -n "$error" -o $? -ne 0 ]; then
+        echo ">El cmando mpirun fallo con el codigo de salida: $error"
+        return 1
+    else
+        echo "Programa: $2" "$GREEN"
+        echo "Num. procesos: $1" "$GREEN"
+        echo "Machine file: $3" "$GREEN"
+        echo ">>>Output:"
+        echo "-----------------------------------------------------------"
+        cat $dir/outputMPI/$2.txt
+        echo "-----------------------------------------------------------"
+        echo "Guardando resultados en \"$dirOut/$2.txt\""
+    fi
+
+    return 0
+}
+
+#Verificar si se pasaron parámetros
+if [[ $# -eq 0 ]]; then
+    imprimir_info_uso
+    exit 1
+fi
+
+s_flag=0
+np_flag=0
+b_flag=0
+mf_flag=0
+m_flag=0
+chs_flag=0
+chb_flag=0
+chm_flag=0
+cho_flag=0
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+    -s)
+        s_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            source_file="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -np)
+        np_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            num_processes="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -b)
+        b_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            exe_name="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -mf)
+        mf_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            machine_file="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -chs)
+        chs_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            source_file="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -chb)
+        chb_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            build_file="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -chm)
+        chm_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            machine_file="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -cho)
+        cho_flag=1
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            output_file="$2"
+            shift
+        else
+            echo "Error: se debe especificar el nombre del archivo."
+            exit 1
+        fi
+        shift
+        ;;
+    -M)
+        m_flag=1
+        shift
+        ;;
+    *)
+        # Si se proporciona una opción no válida, imprimimos el mensaje de uso y salimos
+        imprimir_info_uso
+        exit 1
+        ;;
+    esac
+done
+
+# Comprobamos las combinaciones válidas de opciones
+if [[ $m_flag -eq 1 ]]; then
+    # Si se proporciona la opción -m sola o en combinación con otras opciones, no se requiere ninguna otra comprobación
+    mostrar_menu_mpic
+    exit 0
+
+elif [[ $s_flag -eq 1 && $np_flag -eq 0 && $b_flag -eq 0 && $mf_flag -eq 0 ]]; then
+    # Combinación 1: solo se proporciona la opción -s
+    if check_source "$source_file"; then
+        exe="${source_file%.*}"
+        compilar "$exe" "$source_file"
+    else
+        exit 1
+    fi
+elif [[ $s_flag -eq 1 && $np_flag -eq 1 && $b_flag -eq 0 && $mf_flag -eq 0 ]]; then
+    # Combinación 2: se proporcionan las opciones -s y -np
+    if check_source "$source_file"; then
+        exe="${source_file%.*}"
+        if compilar "$exe" "$source_file"; then
+            if check_num_proc "$num_processes"; then
+                exe_name="${source_file%.*}"
+                ejecutar "$num_processes" "$exe_name" "all.txt"
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 1 && $np_flag -eq 1 && $b_flag -eq 0 && $mf_flag -eq 1 ]]; then
+    # Combinación 2: se proporcionan las opciones -s, -np y -mf
+    if check_source "$source_file"; then
+        exe="${source_file%.*}"
+        if compilar "$exe" "$source_file"; then
+            if check_num_proc "$num_processes"; then
+                if check_machine_file "$machine_file"; then
+                    exe_name="${source_file%.*}"
+                    ejecutar "$num_processes" "$exe_name" "$machine_file"
+                else
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 1 && $np_flag -eq 0 && $b_flag -eq 1 && $mf_flag -eq 0 ]]; then
+    # Combinación 3: se proporcionan las opciones -s y -b
+    if check_source "$source_file"; then
+        if [ -n "$exe_name" ]; then
+            if compilar "$exe_name" "$source_file"; then
+                num_processes="2"
+                ejecutar "$num_processes" "$exe_name" "all.txt"
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 1 && $np_flag -eq 0 && $b_flag -eq 1 && $mf_flag -eq 1 ]]; then
+    # Combinación 3: se proporcionan las opciones -s, -b y -mf
+    if check_source "$source_file"; then
+        if [ -n "$exe_name" ]; then
+            if compilar "$exe_name" "$source_file"; then
+                if check_machine_file "$machine_file"; then
+                    num_processes="2"
+                    ejecutar "$num_processes" "$exe_name" "$machine_file"
+                else
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 1 && $np_flag -eq 1 && $b_flag -eq 1 && $mf_flag -eq 0 ]]; then
+    # Combinación 4: se proporcionan las opciones -s, -np y -b
+    if check_source "$source_file"; then
+        if [ -n "$exe_name" ]; then
+            if compilar "$exe_name" "$source_file"; then
+                if check_num_proc "$num_processes"; then
+                    ejecutar "$num_processes" "$exe_name" "all.txt"
+                else
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 1 && $np_flag -eq 1 && $b_flag -eq 1 && $mf_flag -eq 1 ]]; then
+    # Combinación 4: se proporcionan las opciones -s, -np, -b y y -mf
+    if check_source "$source_file"; then
+        if [ -n "$exe_name" ]; then
+            if compilar "$exe_name" "$source_file"; then
+                if check_num_proc "$num_processes"; then
+                    if check_machine_file "$machine_file"; then
+                        ejecutar "$num_processes" "$exe_name" "$machine_file"
+                    else
+                        exit 1
+                    fi
+                else
+                    exit 1
+                fi
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 0 && $np_flag -eq 1 && $b_flag -eq 1 && $mf_flag -eq 0 ]]; then
+    # Combinación 5: se proporcionan las opciones -np y -b
+    if check_exe_name "$exe_name"; then
+        if check_num_proc "$num_processes"; then
+            ejecutar "$num_processes" "$exe_name" "all.txt"
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $s_flag -eq 0 && $np_flag -eq 1 && $b_flag -eq 1 && $mf_flag -eq 1 ]]; then
+    # Combinación 5: se proporcionan las opciones -np, -b y -mf
+    if [ -n "$exe_name" ]; then
+        if check_num_proc "$num_processes"; then
+            if check_machine_file "$machine_file"; then
+                ejecutar "$num_processes" "$exe_name" "$machine_file"
+            else
+                exit 1
+            fi
+        else
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+
+elif [[ $chs_flag -eq 1 ]]; then
+    check_source $source_file
+
+elif [[ $chb_flag -eq 1 ]]; then
+    check_exe_name $build_file
+
+elif [[ $chm_flag -eq 1 ]]; then
+    check_machine_file $machine_file
+
+elif [[ $cho_flag -eq 1 ]]; then
+    check_output_file $output_file
+
+else
+    # Si no se proporciona ninguna opción o una combinación inválida, imprimimos el mensaje de uso y salimos
+    imprimir_info_uso
+    exit 1
+fi
