@@ -23,7 +23,7 @@
 clone https://github.com/RockdrigoTC/mpiLCI-GUI.git
 cd mpiLCI-GUI
 mkdir ~/MPI
-cp -r sourceMPI buildMPI machinefileMPI outputMPI ~/
+cp -r sourceMPI buildMPI machinefileMPI outputMPI ~/MPI/
 ```
 #### Colocar los scripts en una ruta accesible para la terminal por ejemplo: ``` /usr/bin/ ```
 ``` sh
@@ -35,5 +35,5 @@ sudo chmod +x /usr/bin/mpiLCIFunctions
 ```
 ### -Cliente
 
-#### Asegurarse de tener todos los requisitos previos para realizar una conexion ssh con el servidor
+#### Asegurarse de tener todos los requisitos previos para realizar una conexión ssh con el servidor
 #### Ejecutar mpiLCI.py en el cliente
