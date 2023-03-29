@@ -7,6 +7,8 @@ import re
 import paramiko
 
 # FUNCIONES
+
+
 def compilar(source):
     stdin, stdout, stderr = ssh.exec_command('mpiLCIFunctions -s ' + source)
     output = stdout.read().decode().strip()
